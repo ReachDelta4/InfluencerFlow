@@ -7,13 +7,9 @@ import ReactFlow, {
   addEdge,
   Connection,
   Edge,
-  Panel,
-  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { WorkflowNode } from './WorkflowNode';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 
 // Define node types for the custom nodes
 const nodeTypes = {
@@ -36,7 +32,6 @@ export default function WorkflowCanvas({
   // Initialize nodes and edges with default values or from props
   const [nodes, setNodes, onNodesUpdated] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesUpdated] = useEdgesState(initialEdges);
-  const reactFlowInstance = useReactFlow();
 
   // Sync nodes and edges with parent component if needed
   useEffect(() => {
@@ -71,29 +66,16 @@ export default function WorkflowCanvas({
   );
 
   // Function to add a new node at specified position
-  const handleAddNode = () => {
-    const centerPosition = reactFlowInstance.project({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-    });
-    
-    // Add some offset to avoid stacking on existing nodes
-    const offset = nodes.length * 10;
-    const position = {
-      x: centerPosition.x - 100 + offset,
-      y: centerPosition.y - 50 + offset
-    };
-    
-    const newId = `node_${Date.now()}`;
+  const handleAddNode = (nodeType: string, position: { x: number; y: number }) => {
+    const newId = `node_${nodes.length + 1}`;
     const newNode = {
       id: newId,
       type: 'customNode',
       position,
       data: { 
-        label: 'LinkedIn',
-        type: 'linkedin',
-        nodeColor: '#0A66C2',
-        icon: 'linkedin'
+        label: nodeType.charAt(0).toUpperCase() + nodeType.slice(1),
+        type: nodeType,
+        nodeColor: getNodeColor(nodeType),
       },
     };
     
@@ -106,6 +88,10 @@ export default function WorkflowCanvas({
     switch (type) {
       case 'linkedin':
         return '#0A66C2';
+      case 'instagram':
+        return '#E4405F';
+      case 'twitter':
+        return '#1DA1F2';
       case 'send-dm':
         return '#3B82F6';
       case 'wait':
@@ -114,12 +100,6 @@ export default function WorkflowCanvas({
         return '#8B5CF6';
       case 'google-sheets':
         return '#34A853';
-      case 'like-post':
-        return '#10B981';
-      case 'comment':
-        return '#8B5CF6';
-      case 'follow-up':
-        return '#F59E0B';
       default:
         return '#6B7280';
     }
@@ -138,17 +118,6 @@ export default function WorkflowCanvas({
       >
         <Controls />
         <Background color="#d1d5db" gap={25} size={1} />
-        
-        {/* Add Node Button */}
-        <Panel position="bottom-right" className="mb-6 mr-6">
-          <Button 
-            onClick={handleAddNode}
-            className="rounded-full h-12 w-12 shadow-lg"
-            size="icon"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </Panel>
       </ReactFlow>
     </div>
   );

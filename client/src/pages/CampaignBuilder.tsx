@@ -1,24 +1,44 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
-import { ReactFlowProvider, Node } from "reactflow";
+import ReactFlow, {
+  Background,
+  Controls,
+  Panel,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Connection,
+  Edge,
+  Node,
+} from "reactflow";
 import "reactflow/dist/style.css";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
+  RefreshCw, 
   Save, 
   Play, 
+  Search, 
+  Maximize, 
+  Minimize, 
+  ZoomIn,
   RotateCcw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
+import { WorkflowNode } from "@/components/workflow/WorkflowNode";
+import { SidePanel } from "@/components/workflow/SidePanel";
 import { NodeConfig } from "@/components/workflow/NodeConfig";
 import { SteelBrowserPanel } from "@/components/workflow/SteelBrowserPanel";
 import { ToolbarPanel } from "@/components/workflow/ToolbarPanel";
 import { executeSteelAction, getSteelStatus } from "@/lib/steelBrowser";
-import WorkflowCanvas from "@/components/workflow/WorkflowCanvas";
-import { Campaign, SteelBrowserStatus } from "@/lib/workflowTypes";
+
+// Define node types
+const nodeTypes = {
+  customNode: WorkflowNode,
+};
 
 export default function CampaignBuilder() {
   const { id } = useParams();
@@ -26,18 +46,15 @@ export default function CampaignBuilder() {
   const { toast } = useToast();
   
   const [campaignName, setCampaignName] = useState("New Campaign");
-  const [nodes, setNodes] = useState<any[]>([]);
-  const [edges, setEdges] = useState<any[]>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [steelPanelOpen, setSteelPanelOpen] = useState(false);
-  const [steelStatus, setSteelStatus] = useState<Partial<SteelBrowserStatus>>({ 
-    running: false, 
-    status: 'error' 
-  });
+  const [steelStatus, setSteelStatus] = useState({ running: false, status: 'unknown' });
   const [zoom, setZoom] = useState(100);
   
   // Fetch campaign if id is provided
-  const { data: campaign, isLoading } = useQuery<Campaign>({
+  const { data: campaign, isLoading } = useQuery({
     queryKey: ['/api/campaigns', id],
     enabled: !!id,
   });
@@ -65,8 +82,12 @@ export default function CampaignBuilder() {
     }
   }, [campaign]);
 
-  // Handle node click to open config panel
-  const handleNodeClick = useCallback((node: Node) => {
+  const onConnect = useCallback(
+    (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges]
+  );
+
+  const onNodeClick = useCallback((_, node) => {
     setSelectedNode(node);
   }, []);
 
@@ -91,7 +112,7 @@ export default function CampaignBuilder() {
       
       setNodes([initialNode]);
     }
-  }, [isLoading, nodes.length, id]);
+  }, [isLoading, nodes.length, id, setNodes]);
 
   const handleSave = async () => {
     try {
@@ -173,15 +194,6 @@ export default function CampaignBuilder() {
     }
   };
 
-  // Handle updates from the workflow canvas
-  const handleNodesChange = (updatedNodes: any[]) => {
-    setNodes(updatedNodes);
-  };
-
-  const handleEdgesChange = (updatedEdges: any[]) => {
-    setEdges(updatedEdges);
-  };
-
   if (isLoading && id) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -241,14 +253,28 @@ export default function CampaignBuilder() {
       
       {/* Workflow Canvas */}
       <div className="flex-1 relative">
-        <ReactFlowProvider>
-          <WorkflowCanvas
-            initialNodes={nodes}
-            initialEdges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-          />
-        </ReactFlowProvider>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          nodeTypes={nodeTypes}
+          fitView
+          proOptions={{ hideAttribution: true }}
+        >
+          <Controls />
+          <Background color="#d1d5db" gap={25} size={1} />
+          
+          <Panel position="top-center">
+            <div className="bg-white/80 backdrop-blur-sm rounded-md px-3 py-1 text-sm text-neutral-500 font-mono">
+              {nodes.length} nodes · {edges.length} connections
+            </div>
+          </Panel>
+          
+          <SidePanel />
+        </ReactFlow>
       </div>
       
       {/* Node Configuration Panel (if a node is selected) */}

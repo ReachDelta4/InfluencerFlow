@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useReactFlow, Panel, XYPosition } from 'reactflow';
-import { SiLinkedin } from 'react-icons/si';
+import { SiLinkedin, SiInstagram, SiX } from 'react-icons/si';
 import { Button } from '@/components/ui/button';
 import { 
   MessagesSquare, 
@@ -8,8 +8,7 @@ import {
   ThumbsUp, 
   MessagesSquare as Comment, 
   Repeat, 
-  Filter,
-  Plus
+  Filter
 } from 'lucide-react';
 
 const nodeTypes = [
@@ -17,6 +16,8 @@ const nodeTypes = [
     category: 'Social Platforms',
     items: [
       { id: 'linkedin', label: 'LinkedIn', icon: <SiLinkedin className="h-5 w-5 text-[#0A66C2]" />, color: '#0A66C2' },
+      { id: 'instagram', label: 'Instagram', icon: <SiInstagram className="h-5 w-5 text-[#E4405F]" />, color: '#E4405F' },
+      { id: 'twitter', label: 'X (Twitter)', icon: <SiX className="h-5 w-5" />, color: '#000000' },
     ]
   },
   {

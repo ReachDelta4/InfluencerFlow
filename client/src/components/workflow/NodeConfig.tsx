@@ -37,6 +37,8 @@ export function NodeConfig({ node, onClose, onUpdate }: NodeConfigProps) {
 
     switch (type) {
       case 'linkedin':
+      case 'instagram':
+      case 'twitter':
         return (
           <>
             <div className="mb-4">
@@ -98,12 +100,12 @@ export function NodeConfig({ node, onClose, onUpdate }: NodeConfigProps) {
                   }
                 })
               }
-              placeholder="Hi {first_name}, I noticed you're a {job_title} at {company}..."
+              placeholder="Hi {{first_name}}, I noticed you're a {{job_title}} at {{company}}..."
               className="mt-1"
               rows={6}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Use {"{variable_name}"} to insert dynamic content from lead data
+              Use {{variable_name}} to insert dynamic content from lead data
             </p>
           </div>
         );
@@ -351,6 +353,7 @@ export function NodeConfig({ node, onClose, onUpdate }: NodeConfigProps) {
                 id="humanDelays"
                 checked={nodeConfig.humanDelays || true}
                 onCheckedChange={(checked) => setNodeConfig({ ...nodeConfig, humanDelays: checked })}
+                size="sm"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -359,6 +362,7 @@ export function NodeConfig({ node, onClose, onUpdate }: NodeConfigProps) {
                 id="recording"
                 checked={nodeConfig.recording || true}
                 onCheckedChange={(checked) => setNodeConfig({ ...nodeConfig, recording: checked })}
+                size="sm"
               />
             </div>
           </div>
