@@ -73,8 +73,10 @@ export function SidePanel() {
   const instance = useReactFlow();
 
   const onDragStart = (event: React.DragEvent, nodeType: string, nodeColor: string) => {
+    // React Flow expects these to be strings, not objects
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.setData('nodeColor', nodeColor);
+    // Required for Firefox
     event.dataTransfer.effectAllowed = 'move';
     setDraggedNode(nodeType);
   };

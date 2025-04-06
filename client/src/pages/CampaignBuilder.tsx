@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import ReactFlow, {
   Background,
@@ -34,11 +34,7 @@ import { NodeConfig } from "@/components/workflow/NodeConfig";
 import { SteelBrowserPanel } from "@/components/workflow/SteelBrowserPanel";
 import { ToolbarPanel } from "@/components/workflow/ToolbarPanel";
 import { executeSteelAction, getSteelStatus } from "@/lib/steelBrowser";
-
-// Define node types
-const nodeTypes = {
-  customNode: WorkflowNode,
-};
+import { Campaign, SteelBrowserStatus } from "@/lib/workflowTypes";
 
 export default function CampaignBuilder() {
   const { id } = useParams();
@@ -50,11 +46,16 @@ export default function CampaignBuilder() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [steelPanelOpen, setSteelPanelOpen] = useState(false);
-  const [steelStatus, setSteelStatus] = useState({ running: false, status: 'unknown' });
+  const [steelStatus, setSteelStatus] = useState<Partial<SteelBrowserStatus>>({ running: false, status: 'error' });
   const [zoom, setZoom] = useState(100);
   
+  // Define node types with useMemo to prevent unnecessary re-renders
+  const nodeTypes = useMemo(() => ({
+    customNode: WorkflowNode,
+  }), []);
+  
   // Fetch campaign if id is provided
-  const { data: campaign, isLoading } = useQuery({
+  const { data: campaign, isLoading } = useQuery<Campaign>({
     queryKey: ['/api/campaigns', id],
     enabled: !!id,
   });
@@ -87,7 +88,7 @@ export default function CampaignBuilder() {
     [setEdges]
   );
 
-  const onNodeClick = useCallback((_, node) => {
+  const onNodeClick = useCallback((_: any, node: Node) => {
     setSelectedNode(node);
   }, []);
 
@@ -263,6 +264,40 @@ export default function CampaignBuilder() {
           nodeTypes={nodeTypes}
           fitView
           proOptions={{ hideAttribution: true }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            
+            const reactFlowBounds = event.currentTarget.getBoundingClientRect();
+            const type = event.dataTransfer.getData('application/reactflow');
+            const nodeColor = event.dataTransfer.getData('nodeColor');
+            
+            // Check if the dropped element is valid
+            if (typeof type === 'undefined' || !type) {
+              return;
+            }
+            
+            const position = {
+              x: event.clientX - reactFlowBounds.left,
+              y: event.clientY - reactFlowBounds.top
+            };
+            
+            const newNode = {
+              id: `${type}_${Date.now()}`,
+              type: 'customNode',
+              position,
+              data: { 
+                label: type.charAt(0).toUpperCase() + type.slice(1).replace(/-/g, ' '),
+                type: type,
+                nodeColor: nodeColor,
+              },
+            };
+            
+            setNodes((nds) => [...nds, newNode]);
+          }}
         >
           <Controls />
           <Background color="#d1d5db" gap={25} size={1} />
