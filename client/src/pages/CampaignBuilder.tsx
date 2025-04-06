@@ -23,7 +23,8 @@ import {
   Maximize, 
   Minimize, 
   ZoomIn,
-  RotateCcw
+  RotateCcw,
+  Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -35,6 +36,7 @@ import { SteelBrowserPanel } from "@/components/workflow/SteelBrowserPanel";
 import { ToolbarPanel } from "@/components/workflow/ToolbarPanel";
 import { executeSteelAction, getSteelStatus } from "@/lib/steelBrowser";
 import { Campaign, SteelBrowserStatus } from "@/lib/workflowTypes";
+import { CampaignTypeDialog, CampaignPlatform } from "@/components/CampaignTypeDialog";
 
 export default function CampaignBuilder() {
   const { id } = useParams();
@@ -48,6 +50,8 @@ export default function CampaignBuilder() {
   const [steelPanelOpen, setSteelPanelOpen] = useState(false);
   const [steelStatus, setSteelStatus] = useState<Partial<SteelBrowserStatus>>({ running: false, status: 'error' });
   const [zoom, setZoom] = useState(100);
+  const [campaignPlatform, setCampaignPlatform] = useState<CampaignPlatform>('linkedin');
+  const [showPlatformDialog, setShowPlatformDialog] = useState(false);
   
   // Define node types with useMemo to prevent unnecessary re-renders
   const nodeTypes = useMemo(() => ({
@@ -92,28 +96,71 @@ export default function CampaignBuilder() {
     setSelectedNode(node);
   }, []);
 
-  // Generate initial demo node if no nodes exist
+  // Show platform dialog if creating a new campaign
   useEffect(() => {
-    if (!isLoading && nodes.length === 0 && !id) {
-      const initialNode = {
-        id: '1',
-        type: 'customNode',
-        position: { x: 100, y: 100 },
-        data: { 
-          label: 'LinkedIn',
-          type: 'linkedin',
-          nodeColor: '#0A66C2',
-          icon: 'linkedin',
-          fields: {
-            query: 'Marketing Directors',
-            filters: ['Location: United States', 'Industry: Technology']
-          }
-        }
-      };
-      
-      setNodes([initialNode]);
+    if (!id && !isLoading) {
+      setShowPlatformDialog(true);
+    } else if (campaign?.platform) {
+      // Set platform based on campaign data if editing
+      setCampaignPlatform(campaign.platform as CampaignPlatform);
     }
-  }, [isLoading, nodes.length, id, setNodes]);
+  }, [id, isLoading, campaign]);
+  
+  // Handle platform selection from the dialog
+  const handlePlatformSelect = (platform: CampaignPlatform) => {
+    setCampaignPlatform(platform);
+    setShowPlatformDialog(false);
+    
+    // Generate a suitable starter node based on the platform
+    const getInitialNodeProps = () => {
+      switch (platform) {
+        case 'linkedin':
+          return {
+            label: 'LinkedIn Search',
+            type: 'linkedin',
+            nodeColor: '#0A66C2'
+          };
+        case 'instagram':
+          return {
+            label: 'Instagram Profile',
+            type: 'instagram',
+            nodeColor: '#E4405F'
+          };
+        case 'twitter':
+          return {
+            label: 'Twitter Search',
+            type: 'twitter',
+            nodeColor: '#000000'
+          };
+        default:
+          return {
+            label: 'Node',
+            type: 'node',
+            nodeColor: '#6B7280'
+          };
+      }
+    };
+    
+    const nodeProps = getInitialNodeProps();
+    
+    // Create an initial starter node
+    const initialNode = {
+      id: `${platform}_${Date.now()}`,
+      type: 'customNode',
+      position: { x: 100, y: 100 },
+      data: { 
+        label: nodeProps.label,
+        type: nodeProps.type,
+        nodeColor: nodeProps.nodeColor,
+        platform: platform
+      }
+    };
+    
+    setNodes([initialNode]);
+    
+    // Set campaign name based on platform
+    setCampaignName(`New ${nodeProps.label} Campaign`);
+  };
 
   const handleSave = async () => {
     try {
@@ -126,6 +173,7 @@ export default function CampaignBuilder() {
         name: campaignName,
         workflow: workflowData,
         status: 'draft',
+        platform: campaignPlatform, // Include the campaign platform
       };
       
       if (id) {
@@ -308,7 +356,7 @@ export default function CampaignBuilder() {
             </div>
           </Panel>
           
-          <SidePanel />
+          <SidePanel campaignPlatform={campaignPlatform} />
         </ReactFlow>
       </div>
       
@@ -332,6 +380,13 @@ export default function CampaignBuilder() {
         open={steelPanelOpen}
         onOpenChange={setSteelPanelOpen}
         steelStatus={steelStatus}
+      />
+      
+      {/* Campaign Platform Selection Dialog */}
+      <CampaignTypeDialog 
+        open={showPlatformDialog}
+        onOpenChange={setShowPlatformDialog}
+        onSelect={handlePlatformSelect}
       />
     </div>
   );

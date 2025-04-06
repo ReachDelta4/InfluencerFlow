@@ -8,67 +8,47 @@ import {
   ThumbsUp, 
   MessagesSquare as Comment, 
   Repeat, 
-  Filter
+  Filter,
+  UserPlus,
+  AlertCircle,
+  GitBranch
 } from 'lucide-react';
+import { CampaignPlatform } from '@/components/CampaignTypeDialog';
 
-const nodeTypes = [
-  {
-    category: 'Social Platforms',
-    items: [
-      { id: 'linkedin', label: 'LinkedIn', icon: <SiLinkedin className="h-5 w-5 text-[#0A66C2]" />, color: '#0A66C2' },
-      { id: 'instagram', label: 'Instagram', icon: <SiInstagram className="h-5 w-5 text-[#E4405F]" />, color: '#E4405F' },
-      { id: 'twitter', label: 'X (Twitter)', icon: <SiX className="h-5 w-5" />, color: '#000000' },
-    ]
-  },
-  {
-    category: 'Actions',
-    items: [
-      { id: 'send-dm', label: 'Send DM', icon: <MessagesSquare className="h-5 w-5" />, color: '#3B82F6' },
-      { id: 'wait', label: 'Wait', icon: <Clock className="h-5 w-5" />, color: '#6B7280' },
-      { id: 'like-post', label: 'Like Post', icon: <ThumbsUp className="h-5 w-5" />, color: '#10B981' },
-      { id: 'comment', label: 'Comment', icon: <Comment className="h-5 w-5" />, color: '#8B5CF6' },
-      { id: 'follow-up', label: 'Follow-up', icon: <Repeat className="h-5 w-5" />, color: '#F59E0B' },
-      { id: 'condition', label: 'Condition', icon: <Filter className="h-5 w-5" />, color: '#6366F1' },
-    ]
-  },
-  {
-    category: 'Data Sources',
-    items: [
-      { 
-        id: 'google-sheets', 
-        label: 'Google Sheets', 
-        icon: (
-          <svg className="h-5 w-5 text-green-600" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M11.318 12.545H7.91v-1.909h3.41v1.91zm4.25 0h-3.41v-1.909h3.41v1.91zm-4.25 3.864H7.91v-1.909h3.41v1.91zm4.25 0h-3.41v-1.909h3.41v1.91zm4.25-9.205v12.818c0 .93-.754 1.682-1.682 1.682H5.864c-.928 0-1.682-.752-1.682-1.682V7.204c0-.93.754-1.682 1.682-1.682h12.272c.928 0 1.682.753 1.682 1.682zm-1.682 0H5.863v12.818h12.273V7.204zM11.318 8.59H7.91V6.682h3.41V8.59zm4.25 0h-3.41V6.682h3.41V8.59z"/>
-          </svg>
-        ),
-        color: '#34A853'
-      },
-      { 
-        id: 'database', 
-        label: 'Database', 
-        icon: (
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-          </svg>
-        ),
-        color: '#6B7280'
-      },
-      { 
-        id: 'csv', 
-        label: 'CSV Import', 
-        icon: (
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        ),
-        color: '#6B7280'
-      },
-    ]
-  }
+// Core nodes that appear in all platforms
+const coreNodes = [
+  { id: 'condition', label: 'Condition', icon: <Filter className="h-5 w-5" />, color: '#6366F1', platform: 'core' },
+  { id: 'if-else', label: 'If Else', icon: <GitBranch className="h-5 w-5" />, color: '#7C3AED', platform: 'core' },
+  { id: 'delay', label: 'Delay', icon: <Clock className="h-5 w-5" />, color: '#6B7280', platform: 'core' },
+  { id: 'if-replies', label: 'If Lead Replies', icon: <AlertCircle className="h-5 w-5" />, color: '#D97706', platform: 'core' },
 ];
 
-export function SidePanel() {
+// LinkedIn specific nodes
+const linkedinNodes = [
+  { id: 'send-connection', label: 'Send Connection Request', icon: <UserPlus className="h-5 w-5" />, color: '#0A66C2', platform: 'linkedin' },
+  { id: 'send-message', label: 'Send Message', icon: <MessagesSquare className="h-5 w-5" />, color: '#0A66C2', platform: 'linkedin' },
+  { id: 'like-post', label: 'Like Latest Post', icon: <ThumbsUp className="h-5 w-5" />, color: '#0A66C2', platform: 'linkedin' },
+];
+
+// Instagram specific nodes
+const instagramNodes = [
+  { id: 'send-follow', label: 'Send Follow Request', icon: <UserPlus className="h-5 w-5" />, color: '#E4405F', platform: 'instagram' },
+  { id: 'send-dm', label: 'Send DM', icon: <MessagesSquare className="h-5 w-5" />, color: '#E4405F', platform: 'instagram' },
+  { id: 'like-post', label: 'Like Latest Post', icon: <ThumbsUp className="h-5 w-5" />, color: '#E4405F', platform: 'instagram' },
+];
+
+// Twitter (X) specific nodes
+const twitterNodes = [
+  { id: 'send-follow', label: 'Send Follow Request', icon: <UserPlus className="h-5 w-5" />, color: '#000000', platform: 'twitter' },
+  { id: 'send-dm', label: 'Send DM', icon: <MessagesSquare className="h-5 w-5" />, color: '#000000', platform: 'twitter' },
+  { id: 'like-post', label: 'Like Latest Post', icon: <ThumbsUp className="h-5 w-5" />, color: '#000000', platform: 'twitter' },
+];
+
+interface SidePanelProps {
+  campaignPlatform: CampaignPlatform;
+}
+
+export function SidePanel({ campaignPlatform }: SidePanelProps) {
   const [draggedNode, setDraggedNode] = useState<string | null>(null);
   const instance = useReactFlow();
 
@@ -121,39 +101,116 @@ export function SidePanel() {
     event.dataTransfer.dropEffect = 'move';
   };
 
+  // Select platform-specific nodes
+  const getPlatformNodes = () => {
+    switch (campaignPlatform) {
+      case 'linkedin':
+        return linkedinNodes;
+      case 'instagram':
+        return instagramNodes;
+      case 'twitter':
+        return twitterNodes;
+      default:
+        return []; // This should never happen
+    }
+  };
+
+  // Get platform name for display
+  const getPlatformName = () => {
+    switch (campaignPlatform) {
+      case 'linkedin':
+        return 'LinkedIn';
+      case 'instagram':
+        return 'Instagram';
+      case 'twitter':
+        return 'X (Twitter)';
+      default:
+        return '';
+    }
+  };
+
+  // Get platform color
+  const getPlatformColor = () => {
+    switch (campaignPlatform) {
+      case 'linkedin':
+        return '#0A66C2';
+      case 'instagram':
+        return '#E4405F';
+      case 'twitter':
+        return '#000000';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  const platformNodes = getPlatformNodes();
+  const platformName = getPlatformName();
+  const platformColor = getPlatformColor();
+
   return (
     <Panel position="top-left" className="ml-4 mt-4 w-64 bg-white rounded-md shadow-md overflow-hidden">
       <div className="p-3 border-b border-neutral-200">
-        <h3 className="font-medium text-sm">Node Gallery</h3>
+        <h3 className="font-medium text-sm flex items-center">
+          <span className="mr-2" style={{ color: platformColor }}>
+            {campaignPlatform === 'linkedin' && <SiLinkedin className="h-4 w-4" />}
+            {campaignPlatform === 'instagram' && <SiInstagram className="h-4 w-4" />}
+            {campaignPlatform === 'twitter' && <SiX className="h-4 w-4" />}
+          </span>
+          {platformName} Campaign Builder
+        </h3>
         <p className="text-xs text-neutral-500">Drag and drop nodes to build your workflow</p>
       </div>
       
       <div className="p-2 max-h-[calc(100vh-200px)] overflow-y-auto">
-        {nodeTypes.map((category) => (
-          <div key={category.category} className="mb-4">
-            <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider px-2 mb-1">
-              {category.category}
-            </h4>
-            <div className="space-y-1">
-              {category.items.map((item) => (
-                <div
-                  key={item.id}
-                  draggable
-                  onDragStart={(e) => onDragStart(e, item.id, item.color)}
-                  onDragEnd={onDragEnd}
-                  className={`
-                    flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-grab
-                    ${draggedNode === item.id ? 'bg-neutral-100' : 'hover:bg-neutral-50'}
-                    text-neutral-700
-                  `}
-                >
-                  <span className="mr-3" style={{ color: item.color }}>{item.icon}</span>
-                  {item.label}
-                </div>
-              ))}
-            </div>
+        {/* Platform Specific Nodes */}
+        <div className="mb-4">
+          <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider px-2 mb-1">
+            {platformName} Actions
+          </h4>
+          <div className="space-y-1">
+            {platformNodes.map((item) => (
+              <div
+                key={item.id}
+                draggable
+                onDragStart={(e) => onDragStart(e, item.id, item.color)}
+                onDragEnd={onDragEnd}
+                className={`
+                  flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-grab
+                  ${draggedNode === item.id ? 'bg-neutral-100' : 'hover:bg-neutral-50'}
+                  text-neutral-700
+                `}
+              >
+                <span className="mr-3" style={{ color: item.color }}>{item.icon}</span>
+                {item.label}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Core Nodes - Always visible */}
+        <div className="mb-4">
+          <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider px-2 mb-1">
+            Core Actions
+          </h4>
+          <div className="space-y-1">
+            {coreNodes.map((item) => (
+              <div
+                key={item.id}
+                draggable
+                onDragStart={(e) => onDragStart(e, item.id, item.color)}
+                onDragEnd={onDragEnd}
+                className={`
+                  flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-grab
+                  ${draggedNode === item.id ? 'bg-neutral-100' : 'hover:bg-neutral-50'}
+                  text-neutral-700
+                `}
+              >
+                <span className="mr-3" style={{ color: item.color }}>{item.icon}</span>
+                {item.label}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
       
       <div className="p-3 border-t border-neutral-200 bg-neutral-50">

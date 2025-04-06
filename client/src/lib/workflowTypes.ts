@@ -29,6 +29,7 @@ export interface Campaign {
   id: number;
   name: string;
   status: 'draft' | 'active' | 'paused' | 'completed';
+  platform: string; // 'linkedin', 'instagram', or 'twitter'
   workflow: WorkflowData;
   createdAt: string;
   updatedAt: string;
