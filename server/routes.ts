@@ -59,6 +59,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update campaign" });
     }
   });
+  
+  app.delete("/api/campaigns/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await storage.deleteCampaign(id);
+      
+      if (!result) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete campaign" });
+    }
+  });
 
   // Leads
   app.get("/api/leads", async (req, res) => {
