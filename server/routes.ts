@@ -105,23 +105,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         parser.on('end', async () => {
           try {
-            // Transform CSV records to leads
-            const leads = records.map(record => ({
-              leadListId,
-              name: record.Name || record.name || '',
-              profileUrl: record['Profile URL'] || record.profileUrl || record.profile_url || '',
-              message: record.Message || record.message || '',
-              status: 'pending'
-            }));
+            // Transform CSV records to leads with more flexible field detection
+            const leads = records.map(record => {
+              // Create a case-insensitive mapping from fields
+              const fieldMap = {};
+              Object.keys(record).forEach(key => {
+                fieldMap[key.toLowerCase()] = record[key];
+              });
+              
+              return {
+                leadListId,
+                name: fieldMap['name'] || '',
+                profileUrl: fieldMap['profile url'] || fieldMap['profileurl'] || fieldMap['profile_url'] || '',
+                message: fieldMap['message'] || '',
+                status: 'pending'
+              };
+            });
             
-            // Validate leads
-            const invalidLeads = leads.filter(
-              lead => !lead.name || !lead.profileUrl || !lead.message
-            );
+            // Validate leads - ensure at least profileUrl exists and provide defaults for missing fields
+            for (let lead of leads) {
+              // Set default name if empty
+              if (!lead.name || lead.name.trim() === '') {
+                lead.name = 'Unknown Contact';
+              }
+              
+              // Set default message if empty
+              if (!lead.message || lead.message.trim() === '') {
+                lead.message = 'Hello, I wanted to connect with you!';
+              }
+            }
+            
+            // Now only reject if profileUrl is missing
+            const invalidLeads = leads.filter(lead => !lead.profileUrl);
             
             if (invalidLeads.length > 0) {
-              console.error("Invalid leads found:", invalidLeads);
-              return reject(new Error("CSV contains invalid lead data. Ensure Name, Profile URL, and Message columns exist and have values"));
+              console.error("Invalid leads found - missing Profile URL:", invalidLeads);
+              return reject(new Error("CSV contains invalid lead data. Ensure Profile URL column exists and has values"));
             }
             
             // Insert leads
@@ -141,8 +160,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-        // Push CSV data to the parser
-        Readable.from(req.file.buffer).pipe(parser);
+        // Push CSV data to the parser - we already checked that req.file exists above
+        Readable.from(req.file!.buffer).pipe(parser);
       }).catch(error => {
         throw error;
       });
