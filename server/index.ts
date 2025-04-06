@@ -1,6 +1,92 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
+
+// Initialize the database - create tables and add default user if needed
+async function initializeDatabase() {
+  try {
+    // First, create tables if they don't exist
+    const { client, db } = await import("./db");
+    
+    try {
+      // Create tables directly using SQL
+      log("Creating database tables if they don't exist...", "init");
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username TEXT NOT NULL UNIQUE,
+          email TEXT NOT NULL,
+          password TEXT NOT NULL,
+          full_name TEXT NOT NULL
+        );
+        
+        CREATE TABLE IF NOT EXISTS campaigns (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'draft',
+          workflow JSONB NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+        
+        CREATE TABLE IF NOT EXISTS lead_lists (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          count INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+        
+        CREATE TABLE IF NOT EXISTS leads (
+          id SERIAL PRIMARY KEY,
+          lead_list_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          profile_url TEXT NOT NULL,
+          message TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          last_activity TIMESTAMP,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+        
+        CREATE TABLE IF NOT EXISTS campaign_history (
+          id SERIAL PRIMARY KEY,
+          campaign_id INTEGER NOT NULL,
+          lead_id INTEGER NOT NULL,
+          action TEXT NOT NULL,
+          status TEXT NOT NULL,
+          result TEXT,
+          timestamp TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      log("Database tables created successfully!", "init");
+    } catch (dbError) {
+      console.error("Error creating database tables:", dbError);
+    }
+    
+    // Now check if the default user exists and create if needed
+    try {
+      const defaultUser = await storage.getUserByUsername("demo");
+      
+      if (!defaultUser) {
+        // Create a default user
+        await storage.createUser({
+          username: "demo",
+          email: "demo@example.com", 
+          password: "demo123", // In a real app, this would be hashed
+          fullName: "Demo User"
+        });
+        log("Default user created successfully", "init");
+      }
+    } catch (userError) {
+      console.error("Error creating default user:", userError);
+    }
+  } catch (error) {
+    console.error("Error initializing database:", error);
+  }
+}
 
 const app = express();
 app.use(express.json());
@@ -37,6 +123,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize the database with default data
+  await initializeDatabase();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

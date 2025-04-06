@@ -56,7 +56,10 @@ export default function Leads() {
   
   // Fetch leads for selected list
   const { data: leads, isLoading: isLoadingLeads } = useQuery<Lead[]>({
-    queryKey: ['/api/leads', currentListId],
+    queryKey: ['/api/lead-lists', currentListId, 'leads'],
+    queryFn: currentListId 
+      ? () => apiRequest("GET", `/api/lead-lists/${currentListId}/leads`).then(res => res.json())
+      : undefined,
     enabled: !!currentListId,
   });
   
@@ -131,10 +134,9 @@ export default function Leads() {
       
       // Upload CSV file
       const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('leadListId', listData.id);
+      formData.append('csv', selectedFile);
       
-      const uploadResponse = await fetch('/api/leads/upload', {
+      const uploadResponse = await fetch(`/api/lead-lists/${listData.id}/upload`, {
         method: 'POST',
         body: formData
       });

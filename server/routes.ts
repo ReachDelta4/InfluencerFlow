@@ -1,10 +1,184 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCampaignSchema, insertLeadSchema } from "@shared/schema";
+import { insertCampaignSchema, insertLeadListSchema, insertLeadSchema } from "@shared/schema";
 import { z } from "zod";
+import multer from "multer";
+import { parse } from 'csv-parse';
+import { Readable } from 'stream';
+
+// Configure multer for file uploads
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // limit to 5MB
+  },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Lead Lists
+  app.get("/api/lead-lists", async (req, res) => {
+    try {
+      const userId = 1; // In a real app, get from auth session
+      const leadLists = await storage.getLeadLists(userId);
+      res.json(leadLists);
+    } catch (error) {
+      console.error("Error fetching lead lists:", error);
+      res.status(500).json({ message: "Failed to fetch lead lists" });
+    }
+  });
+
+  app.get("/api/lead-lists/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const leadList = await storage.getLeadList(id);
+      
+      if (!leadList) {
+        return res.status(404).json({ message: "Lead list not found" });
+      }
+      
+      res.json(leadList);
+    } catch (error) {
+      console.error("Error fetching lead list:", error);
+      res.status(500).json({ message: "Failed to fetch lead list" });
+    }
+  });
+
+  app.post("/api/lead-lists", async (req, res) => {
+    try {
+      const userId = 1; // In a real app, get from auth session
+      const leadListData = insertLeadListSchema.parse({
+        ...req.body,
+        userId,
+      });
+      
+      const leadList = await storage.createLeadList(leadListData);
+      res.status(201).json(leadList);
+    } catch (error) {
+      console.error("Error creating lead list:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid lead list data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create lead list" });
+    }
+  });
+
+  // CSV Upload endpoint 
+  app.post("/api/lead-lists/:id/upload", upload.single('csv'), async (req: Request, res: Response) => {
+    try {
+      const leadListId = parseInt(req.params.id);
+      
+      // Check if lead list exists
+      const leadList = await storage.getLeadList(leadListId);
+      if (!leadList) {
+        return res.status(404).json({ message: "Lead list not found" });
+      }
+
+      // Check if file was uploaded
+      if (!req.file) {
+        return res.status(400).json({ message: "No CSV file provided" });
+      }
+      
+      // Parse CSV
+      const records: any[] = [];
+      const parser = parse({
+        delimiter: ',',
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+      });
+      
+      // Handle parsing
+      parser.on('readable', function() {
+        let record;
+        while ((record = parser.read())) {
+          records.push(record);
+        }
+      });
+      
+      // Handle parsing completion
+      await new Promise<void>((resolve, reject) => {
+        parser.on('error', (err) => {
+          console.error("Error parsing CSV:", err);
+          reject(err);
+        });
+        
+        parser.on('end', async () => {
+          try {
+            // Transform CSV records to leads
+            const leads = records.map(record => ({
+              leadListId,
+              name: record.Name || record.name || '',
+              profileUrl: record['Profile URL'] || record.profileUrl || record.profile_url || '',
+              message: record.Message || record.message || '',
+              status: 'pending'
+            }));
+            
+            // Validate leads
+            const invalidLeads = leads.filter(
+              lead => !lead.name || !lead.profileUrl || !lead.message
+            );
+            
+            if (invalidLeads.length > 0) {
+              console.error("Invalid leads found:", invalidLeads);
+              return reject(new Error("CSV contains invalid lead data. Ensure Name, Profile URL, and Message columns exist and have values"));
+            }
+            
+            // Insert leads
+            if (leads.length > 0) {
+              const insertedLeads = await storage.createLeads(leads);
+              
+              // Update lead count in the lead list
+              await storage.updateLeadCount(leadListId);
+              
+              resolve();
+            } else {
+              reject(new Error("No valid leads found in CSV"));
+            }
+          } catch (err) {
+            console.error("Error processing leads:", err);
+            reject(err);
+          }
+        });
+        
+        // Push CSV data to the parser
+        Readable.from(req.file.buffer).pipe(parser);
+      }).catch(error => {
+        throw error;
+      });
+      
+      res.status(200).json({ 
+        message: "CSV processed successfully",
+        count: records.length
+      });
+    } catch (error) {
+      console.error("Error uploading CSV:", error);
+      res.status(500).json({ 
+        message: "Failed to process CSV file", 
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get leads for a lead list
+  app.get("/api/lead-lists/:id/leads", async (req, res) => {
+    try {
+      const leadListId = parseInt(req.params.id);
+      
+      // Check if lead list exists
+      const leadList = await storage.getLeadList(leadListId);
+      if (!leadList) {
+        return res.status(404).json({ message: "Lead list not found" });
+      }
+      
+      const leads = await storage.getLeads(leadListId);
+      res.json(leads);
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      res.status(500).json({ message: "Failed to fetch leads" });
+    }
+  });
+
   // Campaigns
   app.get("/api/campaigns", async (req, res) => {
     const userId = 1; // In a real app, get from auth session

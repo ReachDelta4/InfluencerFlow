@@ -5,7 +5,9 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
+  email: text("email").notNull(),
   password: text("password").notNull(),
+  fullName: text("full_name").notNull(),
 });
 
 export const campaigns = pgTable("campaigns", {
@@ -51,7 +53,9 @@ export const campaignHistory = pgTable("campaign_history", {
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
+  email: true,
   password: true,
+  fullName: true,
 });
 
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
