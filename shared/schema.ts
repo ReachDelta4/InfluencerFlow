@@ -18,22 +18,24 @@ export const campaigns = pgTable("campaigns", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const leads = pgTable("leads", {
+export const leadLists = pgTable("lead_lists", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  company: text("company"),
-  jobTitle: text("job_title"),
-  email: text("email"),
-  linkedinUrl: text("linkedin_url"),
-  instagramUrl: text("instagram_url"),
-  xUsername: text("x_username"),
-  notes: text("notes"),
-  status: text("status").notNull().default("new"),
-  source: text("source").notNull().default("manual"),
+  name: text("name").notNull(),
+  count: integer("count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const leads = pgTable("leads", {
+  id: serial("id").primaryKey(),
+  leadListId: integer("lead_list_id").notNull(),
+  name: text("name").notNull(),
+  profileUrl: text("profile_url").notNull(),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("pending"),
+  lastActivity: timestamp("last_activity"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const campaignHistory = pgTable("campaign_history", {
@@ -58,10 +60,17 @@ export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   updatedAt: true,
 });
 
+export const insertLeadListSchema = createInsertSchema(leadLists).omit({
+  id: true,
+  count: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
+  lastActivity: true,
 });
 
 export const insertCampaignHistorySchema = createInsertSchema(campaignHistory).omit({
@@ -75,6 +84,9 @@ export type User = typeof users.$inferSelect;
 
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
 export type Campaign = typeof campaigns.$inferSelect;
+
+export type InsertLeadList = z.infer<typeof insertLeadListSchema>;
+export type LeadList = typeof leadLists.$inferSelect;
 
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;

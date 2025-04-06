@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import Campaigns from "@/pages/Campaigns";
 import CampaignBuilder from "@/pages/CampaignBuilder";
+import Leads from "@/pages/Leads";
 import Layout from "@/components/Layout";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
         <Route path="/campaigns" component={Campaigns} />
         <Route path="/campaigns/builder" component={CampaignBuilder} />
         <Route path="/campaigns/builder/:id" component={CampaignBuilder} />
+        <Route path="/leads" component={Leads} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

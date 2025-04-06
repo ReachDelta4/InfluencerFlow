@@ -10,6 +10,7 @@ import ReactFlow, {
   Connection,
   Edge,
   Node,
+  applyNodeChanges,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import { WorkflowNode } from "@/components/workflow/WorkflowNode";
+import { DataSourceNode } from "@/components/workflow/DataSourceNode";
 import { SidePanel } from "@/components/workflow/SidePanel";
 import { NodeConfig } from "@/components/workflow/NodeConfig";
 import { SteelBrowserPanel } from "@/components/workflow/SteelBrowserPanel";
@@ -44,8 +46,24 @@ export default function CampaignBuilder() {
   const { toast } = useToast();
   
   const [campaignName, setCampaignName] = useState("New Campaign");
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [nodes, setNodes] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  
+  // Custom nodes change handler to prevent deletion of data source node
+  const onNodesChange = useCallback(
+    (changes: any[]) => {
+      // Filter out any changes that would remove the data source node
+      const filteredChanges = changes.filter((change: any) => {
+        return !(change.type === 'remove' && change.id === 'data-source');
+      });
+      
+      // Apply the filtered changes
+      setNodes((nds) => 
+        applyNodeChanges(filteredChanges, nds)
+      );
+    },
+    [setNodes]
+  );
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [steelPanelOpen, setSteelPanelOpen] = useState(false);
   const [steelStatus, setSteelStatus] = useState<Partial<SteelBrowserStatus>>({ running: false, status: 'error' });
@@ -56,6 +74,7 @@ export default function CampaignBuilder() {
   // Define node types with useMemo to prevent unnecessary re-renders
   const nodeTypes = useMemo(() => ({
     customNode: WorkflowNode,
+    dataSourceNode: DataSourceNode,
   }), []);
   
   // Fetch campaign if id is provided
@@ -111,55 +130,88 @@ export default function CampaignBuilder() {
     setCampaignPlatform(platform);
     setShowPlatformDialog(false);
     
-    // Generate a suitable starter node based on the platform
-    const getInitialNodeProps = () => {
+    // Create a fixed DataSource node as the starting point
+    const dataSourceNode = {
+      id: 'data-source',
+      type: 'dataSourceNode',
+      position: { x: 100, y: 100 },
+      data: { 
+        label: 'Data Source',
+        type: 'data-source',
+        nodeColor: '#16a34a', // Green color for data source
+        isLocked: true, // Flag to prevent deletion
+        onDataChange: (data: any) => {
+          // Update the node data when selection changes
+          setNodes(nodes => 
+            nodes.map(node => 
+              node.id === 'data-source' 
+                ? { ...node, data: { ...node.data, ...data } }
+                : node
+            )
+          );
+        }
+      }
+    };
+    
+    // Generate a suitable action node based on the platform
+    const getActionNodeProps = () => {
       switch (platform) {
         case 'linkedin':
           return {
             label: 'LinkedIn Search',
-            type: 'linkedin',
+            type: 'linkedin-search',
             nodeColor: '#0A66C2'
           };
         case 'instagram':
           return {
             label: 'Instagram Profile',
-            type: 'instagram',
+            type: 'instagram-profile',
             nodeColor: '#E4405F'
           };
         case 'twitter':
           return {
             label: 'Twitter Search',
-            type: 'twitter',
+            type: 'twitter-search',
             nodeColor: '#000000'
           };
         default:
           return {
-            label: 'Node',
-            type: 'node',
+            label: 'Action Node',
+            type: 'action',
             nodeColor: '#6B7280'
           };
       }
     };
     
-    const nodeProps = getInitialNodeProps();
+    const actionProps = getActionNodeProps();
     
-    // Create an initial starter node
-    const initialNode = {
-      id: `${platform}_${Date.now()}`,
+    // Create the action node positioned to the right of data source
+    const actionNode = {
+      id: `${platform}-action-${Date.now()}`,
       type: 'customNode',
-      position: { x: 100, y: 100 },
+      position: { x: 400, y: 100 },
       data: { 
-        label: nodeProps.label,
-        type: nodeProps.type,
-        nodeColor: nodeProps.nodeColor,
+        label: actionProps.label,
+        type: actionProps.type,
+        nodeColor: actionProps.nodeColor,
         platform: platform
       }
     };
     
-    setNodes([initialNode]);
+    // Add connection between data source and action node
+    const initialEdge = {
+      id: `edge-datasource-action`,
+      source: 'data-source',
+      target: actionNode.id,
+      type: 'default',
+    };
+    
+    // Set the nodes and edges
+    setNodes([dataSourceNode, actionNode]);
+    setEdges([initialEdge]);
     
     // Set campaign name based on platform
-    setCampaignName(`New ${nodeProps.label} Campaign`);
+    setCampaignName(`New ${platform.charAt(0).toUpperCase() + platform.slice(1)} Campaign`);
   };
 
   const handleSave = async () => {
@@ -270,7 +322,17 @@ export default function CampaignBuilder() {
           <div className="flex items-center space-x-3">
             <Button
               variant="outline"
-              onClick={() => setNodes([])}
+              onClick={() => {
+                // Keep the dataSource node, reset everything else
+                const dataSourceNode = nodes.find(node => node.id === 'data-source');
+                if (dataSourceNode) {
+                  setNodes([dataSourceNode]);
+                  setEdges([]);
+                } else {
+                  // If no dataSource node exists, simply reset
+                  setShowPlatformDialog(true);
+                }
+              }}
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               Reset
